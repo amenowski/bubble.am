@@ -1,145 +1,407 @@
 /* GLOBAL */
-
+@font-face {
+  font-family: "foncik";
+  src: url("./../../font.ttf");
+}
 body {
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
 }
 
 /* IDs */
 
 #overlays {
-    display:none; 
-    position: absolute; 
-    left: 0; 
-    right: 0; 
-    top: 0; 
-    bottom: 0; 
-    background-color: 
-    rgba(0,0,0,0.5); 
-    z-index: 200;
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 200;
 }
 
 #title {
-    padding: 10px;
-	text-align: center;
+  padding: 10px;
+  text-align: center;
 }
 #motd {
-	text-align: center;
+  text-align: center;
 }
 #canvas {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
 }
 
 #connecting {
-    display:none;
-    position: absolute; 
-    left: 0; 
-    right: 0; 
-    top: 0; 
-    bottom: 0; 
-    z-index: 100; 
-    background-color: rgba(0,0,0,0.5);
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 #nick {
-    width: 65%;
-    float: left;
+  width: 65%;
+  float: left;
 }
 
 #gamemode {
-    width: 33%;
-    float: right;
+  width: 33%;
+  float: right;
 }
 
 #helloDialog {
-    width: 400px;
-    background-color: #FFFFFF;
-    margin: 10px auto;
-    border-radius: 15px;
-    padding: 5px 15px 5px 15px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-right: -50%;
-    -webkit-transform: translate(-50%, -50%);
-    -ms-transform: translate(-50%, -50%);
-    transform: translate(-50%, -50%);
+  width: 400px;
+  height: 500px;
+  background-color: #ffffff;
+  margin: 10px auto;
+  border-radius: 15px;
+  padding: 5px 15px 5px 15px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-right: -50%;
+  -webkit-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  overflow: hidden; /* Dodajemy overflow, aby kontrolować rozmieszczenie dzieci */
+  display: flex;
+  flex-direction: column; /* Ustawiamy kontener helloDialog jako flexbox */
 }
 
 #chat_textbox {
-    -webkit-transition: all .5s ease-in-out;
-    -moz-transition: all .5s ease-in-out;
-    -o-transition: all .5s ease-in-out;
-    transition: all .5s ease-in-out;
-    position: absolute;
-    z-index: 1;
-    bottom: 10px;
-    background: rgba(0, 0, 0, .2);
-    border: 0px;
-    outline: none;
-    color: #FFF;
-    height: 30px;
-    text-indent: 12px;
-    left: 10px;
-    width: 300px;
+  -webkit-transition: all 0.5s ease-in-out;
+  -moz-transition: all 0.5s ease-in-out;
+  -o-transition: all 0.5s ease-in-out;
+  transition: all 0.5s ease-in-out;
+  position: absolute;
+  z-index: 1;
+  bottom: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 0px;
+  outline: none;
+  color: #fff;
+  height: 30px;
+  text-indent: 12px;
+  left: 10px;
+  width: 300px;
 }
 
 #chat_textbox:focus {
-    background: rgba(0, 0, 0, .5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 #footer {
-    text-align: center;
-    margin-bottom: 10px;
-    margin-top: -10px;
+  text-align: center;
+  margin-bottom: 10px;
+  margin-top: -10px;
 }
 
 #play-btn {
-    width: 85%;
-    float: left;
+  width: 85%;
+  float: left;
 }
 
 #settings-btn {
-    width: 13%;
-    float: right;
+  width: 13%;
+  float: right;
 }
 
 #spectate-btn {
-    margin-top: -5px;
+  margin-top: -5px;
 }
 
 /* CLASSES */
 
 .checkbox label {
-    margin-right: 10px;
+  margin-right: 10px;
 }
 
 .mb-10 {
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 
 .loader {
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid #3498db;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 2s linear infinite;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 2s linear infinite;
 }
 
 .center {
-    display: table;
-    margin: 0 auto;
+  display: table;
+  margin: 0 auto;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.navigation {
+  margin-top: auto; /* Ustawiamy górną margines nawigacji na auto, aby przesunąć ją na sam dół */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.navigation button {
+  border: none;
+  background-color: #ffff;
+  font-size: 18px;
+  transition: all 0.3s;
+}
+
+.navigation button:hover {
+  color: #3498db;
+  opacity: 0.7;
+}
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.error {
+  color: rgb(241, 103, 103);
+  font: 600;
+}
+
+.chat_textbox {
+  transition: all 0.5s ease-in-out;
+  position: absolute;
+  z-index: 201;
+  bottom: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 0;
+  outline: none;
+  color: #fff;
+  height: 30px;
+  text-indent: 12px;
+  left: 10px;
+  width: 300px;
+}
+
+#chatLog {
+  position: absolute;
+  width: 300px;
+  bottom: 40px;
+  left: 10px;
+  font-size: 14px;
+  color: #000;
+  height: 300px;
+  z-index: 201;
+  overflow: hidden;
+}
+
+.chat_textbox:focus {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+input.chat {
+  position: absolute;
+  bottom: 0;
+}
+
+input.chat {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 6px 12px;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #555;
+  background-color: #fff;
+  background-image: none;
+  border: 0;
+  border-top: 1px dotted #e3e3e3;
+}
+
+.mess_type_1 {
+  font-weight: 700;
+  background-color: #ffaaaa;
+}
+
+.mess_type_2 {
+  color: orange;
+  font-weight: 700;
+}
+
+.mess_type_3 {
+  color: #555;
+}
+#instructions {
+  min-height: 200px;
+}
+#radio_mode {
+  margin-top: 10px;
+  text-align: center;
+  display: flex;
+  justify-content: start;
+}
+
+#radio_mode input[type="radio"] {
+  display: none;
+}
+
+#radio_mode .gm-s {
+  display: inline-block;
+  background-color: #fafafa;
+  padding: 4px 5px;
+  cursor: pointer;
+  font-size: 14px;
+  border: 1px solid #b1b1b1;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  text-align: center;
+}
+
+#radio_mode input[type="radio"]:checked + label {
+  border: 2px solid #4a8eff;
+}
+.radio-battle {
+  display: none;
+}
+
+.radio-battle label,
+.radio-battle button {
+  width: 32% !important;
+}
+.btn-play,
+.btn-settings,
+.btn-spectate {
+  display: block;
+  height: 35px;
+}
+
+.btn-play {
+  width: 86%;
+  float: left;
+}
+
+.btn-join {
+  width: 100%;
+}
+
+.btn-login {
+  width: 45%;
+}
+
+.btn-settings {
+  width: 13%;
+  float: right;
+}
+
+.btn-spectate {
+  display: block;
+  float: right;
+}
+.checkbox-danger input[type="checkbox"]:checked + label::before,
+.checkbox-danger input[type="radio"]:checked + label::before {
+  background-color: #d9534f;
+  border-color: #d9534f;
+}
+
+.checkbox-danger input[type="checkbox"]:checked + label::after,
+.checkbox-danger input[type="radio"]:checked + label::after {
+  color: #fff;
+}
+.radio-danger input[type="radio"] + label::after {
+  background-color: #d9534f;
+}
+
+.radio-danger input[type="radio"]:checked + label::before {
+  border-color: #d9534f;
+}
+.checkbox-danger input[type="checkbox"]:indeterminate + label::before,
+.checkbox-danger input[type="radio"]:indeterminate + label::before {
+  background-color: #d9534f;
+  border-color: #d9534f;
+}
+
+.checkbox-danger input[type="checkbox"]:indeterminate + label::after,
+.checkbox-danger input[type="radio"]:indeterminate + label::after {
+  background-color: #fff;
+}
+.radio-danger input[type="radio"] + label::after {
+  background-color: #d9534f;
+}
+
+.radio-danger input[type="radio"]:checked + label::before {
+  border-color: #d9534f;
+}
+
+.radio-danger input[type="radio"]:checked + label::after {
+  background-color: #d9534f;
+}
+#tournament-modal .modal-body {
+  min-height: 400px;
+}
+
+#tournament-modal .modal-dialog {
+  width: 800px;
+}
+
+#tournament-modal .col-xs-6 {
+  padding: 5px;
+}
+
+#tournament-modal .panel-body {
+  padding-top: 0;
+}
+
+#tournament-modal .panel-heading {
+  color: #727272 !important;
+  font-weight: 700;
+}
+
+#tournament-modal .panel-body {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#tournament-modal small {
+  color: gray;
+}
+
+#tournament-modal .row {
+  position: relative;
+  min-height: 240px !important;
+}
+
+.tournament-mode {
+  padding: 5px;
+  min-height: 100px;
+}
+
+.tournament-mode strong {
+  display: block;
+  font-size: 15px;
+  text-align: center;
+}
+#friends-view-modal-data tr.tr-disabled,
+#tournament-modal tr.tr-disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+#friends-view-modal-data tr,
+.tournament-invite tr {
+  cursor: pointer;
 }

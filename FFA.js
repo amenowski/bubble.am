@@ -10,16 +10,44 @@ var myos = require("os");
 var ini = require("./modules/ini.js");
 
 // Project imports
-var Packet = require("./packet");
-var PlayerTracker = require("./PlayerTracker");
-var PacketHandler = require("./PacketHandler");
-var Entity = require("./entity");
-var Gamemode = require("./gamemodes");
-var BotLoader = require("./ai/BotLoader");
-var Logger = require("./modules/log");
+var Packet = require("./packet/index.js");
+var PlayerTracker = require("./PlayerTracker.js");
+var PacketHandler = require("./PacketHandler.js");
+var Entity = require("./entity/index.js");
+var Gamemode = require("./gamemodes/index.js");
+var BotLoader = require("./ai/BotLoader.js");
+var Logger = require("./modules/log.js");
 var serveStatic = require("serve-static");
 var serve = serveStatic("./client/");
+var cookieParser = require("cookie-parser");
 // GameServer implementation
+
+const { createClient } = require("@supabase/supabase-js");
+
+const supabaseUrl = "https://wcskddmelsobazehyceo.supabase.co";
+const supabaseKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indjc2tkZG1lbHNvYmF6ZWh5Y2VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTAwNzYwODYsImV4cCI6MjAyNTY1MjA4Nn0.nhKExJF1NuEQjyJnkWyc9mKYaaZR7dqOUQlyfvUGr2Q";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function getPlayerColorFromDatabase(player) {
+  try {
+    // Pobieramy dane gracza z bazy danych
+    const { data, error } = await supabase
+      .from("players")
+      .select("color")
+      .eq("nick", player.getName())
+      .single();
+    if (error) {
+      console.error("Błąd pobierania koloru gracza:", error.message);
+      return null;
+    }
+    // Jeśli kolor nie jest dostępny lub jest pusty, zwracamy null
+    return { r: data.color[0], g: data.color[1], b: data.color[2] };
+  } catch (error) {
+    console.error("Błąd pobierania koloru gracza:", error.message);
+    return null;
+  }
+}
 function GameServer() {
   // Startup
   this.run = true;
@@ -61,7 +89,7 @@ function GameServer() {
     // Border - Right: X increases, Down: Y increases (as of 2015-05-20)
     serverMaxConnections: 64, // Maximum amount of connections to the server.
     serverMaxConnPerIp: 9,
-    serverPort: 8080, // Server port
+    serverPort: 9090, // Server port
     serverGamemode: 0, // Gamemode, 0 = FFA, 1 = Teams
     serverResetTime: 0, // Time in hours to reset (0 is off)
     serverName: "Ogar3 Server", // The name to display on the tracker (leave empty will show ip:port)
@@ -168,7 +196,7 @@ GameServer.prototype.start = function () {
         this.sqlconfig.table +
         "\u001B[0m"
     );
-    MySQL = require("./modules/mysql");
+    MySQL = require("./modules/mysql.js");
     this.mysql = new MySQL();
     this.mysql.init(this.sqlconfig);
     this.mysql.connect();
@@ -177,13 +205,17 @@ GameServer.prototype.start = function () {
 
   // Gamemode configurations
   this.gameMode.onServerInit(this);
-  this.config.serverPort = process.env.PORT || this.config.serverPort;
+  this.config.serverPort = process.env.PORT || 1234;
   // here
   // Start the server
   var hserver = http.createServer(function (req, res) {
+    // Use cookie-parser middleware to parse cookies from the request
+
+    // Set Access-Control-Allow-Origin header to allow cross-origin requests
     res.setHeader("Access-Control-Allow-Origin", "*");
+
+    // Call finalhandler to end the response
     var done = finalhandler(req, res);
-    // res.end({title:12})
     serve(req, res, done);
   });
   hserver.listen(
@@ -218,14 +250,18 @@ GameServer.prototype.start = function () {
   });
 
   function connectionEstablished(ws) {
-    if (this.clients.length >= this.config.serverMaxConnections) {
+    // Ensure 'this' context refers to the GameServer instance
+    var server = this;
+
+    // Rest of the function remains unchanged
+    if (server.clients.length >= server.config.serverMaxConnections) {
       // Server full
       console.log(
         "\u001B[33mClient tried to connect, but server player limit has been reached!\u001B[0m"
       );
       ws.close();
       return;
-    } else if (this.banned.indexOf(ws._socket.remoteAddress) != -1) {
+    } else if (server.banned.indexOf(ws._socket.remoteAddress) != -1) {
       // Banned
       console.log(
         "\u001B[33mClient " +
@@ -237,33 +273,33 @@ GameServer.prototype.start = function () {
     }
 
     var origin = ws.upgradeReq.headers.origin;
-    if (this.config.serverMaxConnPerIp) {
-      for (var cons = 1, i = 0, llen = this.clients.length; i < llen; i++) {
-        if (this.clients[i].remoteAddress == ws._socket.remoteAddress) {
+    if (server.config.serverMaxConnPerIp) {
+      for (var cons = 1, i = 0, llen = server.clients.length; i < llen; i++) {
+        if (server.clients[i].remoteAddress == ws._socket.remoteAddress) {
           cons++;
         }
       }
-      if (cons > this.config.serverMaxConnPerIp) {
+      if (cons > server.config.serverMaxConnPerIp) {
         ws.close();
         return;
       }
     }
 
     function close(error) {
-      this.server.log.onDisconnect(this.socket.remoteAddress);
-      var client = this.socket.playerTracker;
+      server.log.onDisconnect(ws.remoteAddress);
+      var client = ws.playerTracker;
       console.log(
         "\u001B[31mClient Disconnect: " +
-          this.socket.remoteAddress +
+          ws.remoteAddress +
           ":" +
-          this.socket.remotePort +
+          ws.remotePort +
           " Error " +
           error +
           "\u001B[0m"
       );
-      var len = this.socket.playerTracker.cells.length;
+      var len = ws.playerTracker.cells.length;
       for (var i = 0; i < len; i++) {
-        var cell = this.socket.playerTracker.cells[i];
+        var cell = ws.playerTracker.cells[i];
 
         if (!cell) {
           continue;
@@ -271,21 +307,21 @@ GameServer.prototype.start = function () {
         cell.calcMove = function () {
           return;
         }; // Clear function so that the cell cant move
-        // this.server.removeNode(cell);
+        // server.removeNode(cell);
       }
-      client.disconnect = this.server.config.playerDisconnectTime * 20;
-      this.socket.sendPacket = function () {
+      client.disconnect = server.config.playerDisconnectTime * 20;
+      ws.sendPacket = function () {
         return;
       }; // Clear function so no packets are sent
     }
     ws.remoteAddress = ws._socket.remoteAddress;
     ws.remotePort = ws._socket.remotePort;
-    this.log.onConnect(ws.remoteAddress); // Log connections
+    server.log.onConnect(ws.remoteAddress); // Log connections
     console.log(
       "(" +
-        this.clients.length +
+        server.clients.length +
         "/" +
-        this.config.serverMaxConnections +
+        server.config.serverMaxConnections +
         ") \u001B[32mClient connect: " +
         ws.remoteAddress +
         ":" +
@@ -295,16 +331,24 @@ GameServer.prototype.start = function () {
         "]\u001B[0m"
     );
 
-    ws.playerTracker = new PlayerTracker(this, ws);
-    ws.packetHandler = new PacketHandler(this, ws);
+    ws.playerTracker = new PlayerTracker(server, ws);
+    cookieParser()(ws.upgradeReq, null, function () {
+      // Get the value of the userHash cookie
+      var userHash = ws.upgradeReq.cookies.userHash;
+
+      // Create PacketHandler instance after getting userHash
+      ws.packetHandler = new PacketHandler(server, ws, userHash);
+    });
+
     ws.on("message", ws.packetHandler.handleMessage.bind(ws.packetHandler));
 
-    var bindObject = { server: this, socket: ws };
+    var bindObject = { server: server, socket: ws };
     ws.on("error", close.bind(bindObject));
     ws.on("close", close.bind(bindObject));
-    this.clients.push(ws);
-    this.MasterPing();
+    server.clients.push(ws);
+    server.MasterPing();
   }
+
   this.startStatsServer(this.config.serverStatsPort);
 };
 GameServer.prototype.onHttpServerOpen = function () {
@@ -418,6 +462,30 @@ GameServer.prototype.getRandomSpawn = function () {
   return pos;
 };
 
+GameServer.prototype.getPlayerColor = async function (player) {
+  const playerColor = await getPlayerColorFromDatabase(player);
+
+  if (
+    playerColor &&
+    playerColor.r !== undefined &&
+    playerColor.g !== undefined &&
+    playerColor.b !== undefined
+  ) {
+    // Jeśli kolor gracza został ustawiony w bazie danych
+    return playerColor;
+  } else {
+    // Jeśli kolor gracza nie został ustawiony w bazie danych, generujemy losowy kolor
+    var colorRGB = [0xff, 0x07, (Math.random() * 256) >> 0];
+    colorRGB.sort(function () {
+      return 0.5 - Math.random();
+    });
+    return {
+      r: colorRGB[0],
+      b: colorRGB[1],
+      g: colorRGB[2],
+    };
+  }
+};
 GameServer.prototype.getRandomColor = function () {
   if (this.config.serverOldColors) {
     var index = Math.floor(Math.random() * this.oldcolors.length);
@@ -845,7 +913,60 @@ GameServer.prototype.splitCells = function (client) {
     this.setAsMovingNode(split);
   }
 };
+GameServer.prototype.shift = function (client) {
+  var len = client.cells.length;
+  for (var i = 0; i < len; i++) {
+    if (client.cells.length >= this.config.playerMaxCells) {
+      // Player cell limit
+      continue;
+    }
 
+    var cell = client.cells[i];
+    if (!cell) {
+      continue;
+    }
+
+    if (cell.mass < this.config.playerMinMassSplit) {
+      continue;
+    }
+
+    // Get angle
+    var deltaY = client.mouse.y - cell.position.y;
+    var deltaX = client.mouse.x - cell.position.x;
+    var angle = Math.atan2(deltaX, deltaY);
+
+    // Get starting position
+    var size = cell.getSize() / 2;
+    var startPos = {
+      x: cell.position.x + size * Math.sin(angle),
+      y: cell.position.y + size * Math.cos(angle),
+    };
+    // Calculate mass and speed of splitting cell
+    // Calculate mass and speed of splitting cell
+    var splitSpeed = cell.getSpeed() * this.config.playerSplitSpeedMultiplier;
+    var newMass = cell.mass / 2;
+    cell.mass = newMass;
+    // Create cell
+    var split = new Entity.PlayerCell(
+      this.getNextNodeId(),
+      client,
+      startPos,
+      newMass
+    );
+    split.setAngle(angle);
+    split.setMoveEngineData(splitSpeed, 32, 0.85);
+    split.calcMergeTime(this.config.playerRecombineTime);
+    if (this.config.playerSmoothSplit) {
+      split.ignoreCollision = true;
+      split.restoreCollisionTicks = 8;
+    }
+    // split.owner.name = client.owner.name;
+
+    // Add to moving cells list
+    this.addNode(split); // moved this here,. to see if it needs be aded, before move...
+    this.setAsMovingNode(split);
+  }
+};
 GameServer.prototype.ejectMass = function (client) {
   for (var i = 0; i < client.cells.length; i++) {
     var cell = client.cells[i];
@@ -928,7 +1049,7 @@ GameServer.prototype.shootVirus = function (parent) {
     this.config.virusStartMass
   );
   newVirus.setAngle(parent.getAngle());
-  newVirus.setMoveEngineData(200, 20);
+  newVirus.setMoveEngineData(400, 20); // dalekosc wystrzelenia miny
 
   // Add to moving cells list
   this.addNode(newVirus);
@@ -1103,7 +1224,7 @@ GameServer.prototype.updateCells = function () {
 GameServer.prototype.loadConfig = function () {
   try {
     // Load the contents of the config file
-    var load = ini.parse(fs.readFileSync("./gameserver.ini", "utf-8"));
+    var load = ini.parse(fs.readFileSync("./ffa.ini", "utf-8"));
 
     for (var obj in load) {
       if (obj.substr(0, 2) != "//") this.config[obj] = load[obj];

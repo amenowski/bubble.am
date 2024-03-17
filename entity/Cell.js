@@ -12,7 +12,7 @@ function Cell(nodeId, owner, position, mass, gameServer) {
 
   this.moveEngineTicks = 0; // Amount of times to loop the movement function
   this.moveEngineSpeed = 0;
-  this.moveDecay = 0.75;
+  this.moveDecay = 0.5;
   this.angle = 0; // Angle of movement
 }
 
@@ -73,7 +73,7 @@ Cell.prototype.getSpeed = function () {
   // (should possibly have a config value for this?)
   return (
     (this.owner.gameServer.config.playerSpeed *
-      Math.pow(this.mass, -1.0 / 4.5) *
+      Math.pow(this.mass, -1.0 / 3.7) *
       50) /
     40
   );
@@ -90,7 +90,7 @@ Cell.prototype.getAngle = function () {
 Cell.prototype.setMoveEngineData = function (speed, ticks, decay) {
   this.moveEngineSpeed = speed;
   this.moveEngineTicks = ticks;
-  this.moveDecay = isNaN(decay) ? 0.75 : decay;
+  this.moveDecay = isNaN(decay) ? 0.5 : decay;
 };
 
 Cell.prototype.getEatingRange = function () {

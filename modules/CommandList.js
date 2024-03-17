@@ -1,4 +1,10 @@
 // Imports
+const { createClient } = require("@supabase/supabase-js");
+const supabaseUrl = "https://wcskddmelsobazehyceo.supabase.co";
+const supabaseKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indjc2tkZG1lbHNvYmF6ZWh5Y2VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTAwNzYwODYsImV4cCI6MjAyNTY1MjA4Nn0.nhKExJF1NuEQjyJnkWyc9mKYaaZR7dqOUQlyfvUGr2Q";
+const supabase = createClient(supabaseUrl, supabaseKey);
+console.log(supabase);
 var GameMode = require("../gamemodes");
 var Packet = require("../packet");
 var Entity = require("../entity");
@@ -10,6 +16,45 @@ function Commands() {
 module.exports = Commands;
 
 // Utils
+async function savePlayerColorToDatabase(nick, newColor) {
+  try {
+    // Query the database to find the user based on the nickname
+    const { data: users, error: queryError } = await supabase
+      .from("players")
+      .select()
+      .eq("nick", nick)
+      .single(); // Assuming each nickname is unique
+
+    console.log(users);
+
+    if (queryError) {
+      console.error("Error fetching user data:", queryError.message);
+      return;
+    }
+
+    if (!users) {
+      console.error("User not found with nickname:", nick);
+      return;
+    }
+
+    // Update user data with the serialized color string
+    const { data, error } = await supabase
+      .from("players")
+      .update({ color: newColor })
+      .eq("nick", nick)
+      .single();
+
+    if (error) {
+      console.error("Error updating player color:", error.message);
+      return;
+    }
+
+    console.log("Player color updated successfully:", data);
+  } catch (error) {
+    console.error("Error saving player color:", error.message);
+  }
+}
+
 var fillChar = function (data, char, fieldLength, rTL) {
   var result = data.toString();
   if (rTL === true) {
@@ -109,7 +154,7 @@ Commands.list = {
     if (gameServer.banned.indexOf(ip) == -1) {
       gameServer.banned.push(ip);
       console.log("\u001B[36mServer: \u001B[0mAdded " + ip + " to the banlist");
-      // Remove from game
+      // Remove from gameadd
       for (var i in gameServer.clients) {
         var c = gameServer.clients[i];
         if (!c.remoteAddress) {
@@ -188,26 +233,28 @@ Commands.list = {
     process.stdout.write("\u001b[2J\u001b[0;0H");
   },
   color: function (gameServer, split) {
-    // Validation checks
-    var id = parseInt(split[1]);
-    if (isNaN(id)) {
-      console.log(
-        "\u001B[36mServer: \u001B[0mPlease specify a valid player ID!"
-      );
-      return;
-    }
+    var nick = split[1]; // Get nickname
+    var color = {
+      r: parseInt(split[2]),
+      g: parseInt(split[3]),
+      b: parseInt(split[4]),
+    };
 
-    var color = { r: 0, g: 0, b: 0 };
-    color.r = Math.max(Math.min(parseInt(split[2]), 255), 0);
-    color.g = Math.max(Math.min(parseInt(split[3]), 255), 0);
-    color.b = Math.max(Math.min(parseInt(split[4]), 255), 0);
-
-    // Sets color to the specified amount
-    for (var i in gameServer.clients) {
-      if (gameServer.clients[i].playerTracker.pID == id) {
+    // Ustawienie koloru dla gracza
+    for (var i = 0; i < gameServer.clients.length; i++) {
+      if (gameServer.clients[i].playerTracker.name == nick) {
         var client = gameServer.clients[i].playerTracker;
-        client.setColor(color); // Set color
-        for (var j in client.cells) {
+        client.setColor(color); // Ustawienie koloru
+
+        // Zapisanie koloru do bazy danych
+        savePlayerColorToDatabase(nick, [
+          parseInt(split[2]),
+          parseInt(split[3]),
+          parseInt(split[4]),
+        ]);
+
+        // Ustawienie koloru dla wszystkich komórek gracza
+        for (var j = 0; j < client.cells.length; j++) {
           client.cells[j].setColor(color);
         }
         break;
@@ -257,17 +304,24 @@ Commands.list = {
     }
   },
   kill: function (gameServer, split) {
-    var id = parseInt(split[1]);
-    if (isNaN(id)) {
-      console.log(
-        "\u001B[36mServer: \u001B[0mPlease specify a valid player ID!"
-      );
-      return;
+    var nick = split[1]; // Get nickname
+    var count = 0;
+    for (var i in gameServer.clients) {
+      if (gameServer.clients[i].playerTracker.name == nick) {
+        var client = gameServer.clients[i].playerTracker;
+        var len = client.cells.length;
+        for (var j = 0; j < len; j++) {
+          gameServer.removeNode(client.cells[0]);
+          count++;
+        }
+        console.log("\u001B[36mServer: \u001B[0mRemoved " + count + " cells");
+        break;
+      }
     }
 
     var count = 0;
     for (var i in gameServer.clients) {
-      if (gameServer.clients[i].playerTracker.pID == id) {
+      if (gameServer.clients[i].playerTracker.name == nick) {
         var client = gameServer.clients[i].playerTracker;
         var len = client.cells.length;
         for (var j = 0; j < len; j++) {
@@ -290,27 +344,16 @@ Commands.list = {
     console.log("\u001B[36mServer: \u001B[0mRemoved " + count + " cells");
   },
   mass: function (gameServer, split) {
-    // Validation checks
-    var id = parseInt(split[1]);
-    if (isNaN(id)) {
-      console.log(
-        "\u001B[36mServer: \u001B[0mPlease specify a valid player ID!"
-      );
-      return;
-    }
+    var nick = split[1]; // Get nickname
     var amount = Math.max(parseInt(split[2]), 9);
-    if (isNaN(amount)) {
-      console.log("\u001B[36mServer: \u001B[0mPlease specify a valid number");
-      return;
-    }
+
     // Sets mass to the specified amount
     for (var i in gameServer.clients) {
-      if (gameServer.clients[i].playerTracker.pID == id) {
+      if (gameServer.clients[i].playerTracker.name == nick) {
         var client = gameServer.clients[i].playerTracker;
         for (var j in client.cells) {
           client.cells[j].mass = amount;
         }
-
         console.log(
           "\u001B[36mServer: \u001B[0mSet mass of " +
             client.name +
@@ -322,17 +365,11 @@ Commands.list = {
     }
   },
   merge: function (gameServer, split) {
-    // Validation checks
-    var id = parseInt(split[1]);
-    if (isNaN(id)) {
-      console.log(
-        "\u001B[36mServer: \u001B[0mPlease specify a valid player ID!"
-      );
-      return;
-    }
+    var nick = split[1]; // Get nickname
+
     // Sets merge time
     for (var i in gameServer.clients) {
-      if (gameServer.clients[i].playerTracker.pID == id) {
+      if (gameServer.clients[i].playerTracker.name == nick) {
         var client = gameServer.clients[i].playerTracker;
         for (var j in client.cells) {
           client.cells[j].calcMergeTime(-10000);
@@ -345,23 +382,12 @@ Commands.list = {
     }
   },
   split: function (gameServer, split) {
-    // Validation checks
-    var id = parseInt(split[1]);
+    var nick = split[1]; // Get nickname
     var count = parseInt(split[2]);
-    if (isNaN(id)) {
-      console.log(
-        "\u001B[36mServer: \u001B[0mPlease specify a valid player ID!"
-      );
-      return;
-    }
-    if (isNaN(count)) {
-      //Split into 16 cells
-      count = 4;
-    }
 
     // Split!
     for (var i in gameServer.clients) {
-      if (gameServer.clients[i].playerTracker.pID == id) {
+      if (gameServer.clients[i].playerTracker.name == nick) {
         var client = gameServer.clients[i].playerTracker;
         //Split
         for (var i = 0; i < count; i++) {
@@ -375,24 +401,13 @@ Commands.list = {
     }
   },
   name: function (gameServer, split) {
-    // Validation checks
-    var id = parseInt(split[1]);
-    if (isNaN(id)) {
-      console.log(
-        "\u001B[36mServer: \u001B[0mPlease specify a valid player ID!"
-      );
-      return;
-    }
+    var nick = split[1]; // Get nickname
     var name = split[2];
-    if (typeof name == "undefined") {
-      console.log("\u001B[36mServer: \u001B[0mPlease type a valid name");
-      return;
-    }
+
     // Change name
     for (var i = 0; i < gameServer.clients.length; i++) {
       var client = gameServer.clients[i].playerTracker;
-
-      if (client.pID == id) {
+      if (client.name == nick) {
         console.log(
           "\u001B[36mServer: \u001B[0mChanging " + client.name + " to " + name
         );
@@ -401,7 +416,7 @@ Commands.list = {
       }
     }
     // Error
-    console.log("\u001B[36mServer: \u001B[0mPlayer " + id + " was not found");
+    console.log("\u001B[36mServer: \u001B[0mPlayer " + nick + " was not found");
   },
   playerlist: function (gameServer, split) {
     console.log("Showing " + gameServer.clients.length + " players: ");

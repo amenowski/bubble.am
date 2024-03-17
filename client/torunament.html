@@ -44,8 +44,9 @@
     <script src="assets/js/log.js"></script>
     <script src="assets/js/vector.js"></script>
     <script src="assets/js/main_out.js"></script>
-    <script type="module" src="assets/js/user.js"></script>
+    <script src="assets/js/menu.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script type="module" src="assets/js/user.js" defer></script>
   </head>
 
   <body>
@@ -94,47 +95,21 @@
                 onchange="setserver($(this).val());"
                 required
               >
-                <option value="localhost:1234">FFA</option>
-                <option value="localhost:2345">Battle</option>
+                <option selected disabled>Gamemode:</option>
+                <option value="localhost:1">Hardcore 1</option>
+                <option value="localhost:2">Hardcore 2</option>
+                <option value="localhost:3">Tournament</option>
               </select>
               <br clear="both" />
             </div>
-            <div id="radio_mode" style="display: block">
-              <div class="radio-battle">
-                <input
-                  id="radio_mode_12"
-                  name="mode_type"
-                  type="radio"
-                  value="12"
-                />
-                <label class="gm-s" for="radio_mode_12">Battle 1v1</label>
-                <input
-                  id="radio_mode_11"
-                  name="mode_type"
-                  type="radio"
-                  value="11"
-                />
-                <label class="gm-s" for="radio_mode_11">Battle 2v2</label>
-              </div>
-              <!-- <button
-                class="btn btn-success"
-                id="battle-spect"
-                onclick="$('#battle-live').modal('toggle'); return false;"
-                disabled=""
+              <button
+                type="submit"
+                id="play-btn"
+                onclick="setNick(document.getElementById('nick').value); return false;"
+                class="btn btn-play btn-primary btn-needs-server"
               >
-                Spectate
-              </button> -->
-
-              <div class="form-group">
-                <button
-                  type="submit"
-                  id="play-btn"
-                  onclick="setHash(document.getElementById('nick').value); return false;"
-                  class="btn btn-play btn-primary btn-needs-server"
-                >
-                  Play
-                </button>
-              </div>
+                Play
+              </button>
               <button
                 onclick="$('#settings, #instructions').toggle(); return false;"
                 class="btn btn-info btn-settings"
@@ -144,6 +119,7 @@
               </button>
               <br clear="both" />
             </div>
+
             <div id="settings" class="checkbox" style="display: none">
               <div class="form-group" id="mainform">
                 <button
@@ -225,19 +201,9 @@
           </div>
         </form>
         <hr />
-        <div id="instructions">
-          <center style="margin-bottom: 20px">
-            <span class="text-muted"
-              >Move your mouse to control your cell<br />Press <b>Space</b> to
-              split<br />Press <strong>W, E (auto)</strong> to eject some
-              mass<br /><br
-            /></span>
-          </center>
-        </div>
       </div>
     </div>
 
-    <div class="enableChat" style="display: inline"></div>
     <div id="connecting">
       <div
         style="
@@ -257,80 +223,41 @@
     </div>
 
     <canvas id="canvas" width="800" height="600"></canvas>
-    <div>
-      <input
-        type="text"
-        id="chat_textbox"
-        placeholder="Press enter to chat!"
-        maxlength="200"
-      />
-      <div id="chatLog"></div>
-    </div>
+    <input
+      type="text"
+      id="chat_textbox"
+      placeholder="Press enter to chat!"
+      maxlength="200"
+    />
     <div style="font-family: 'Ubuntu'">&nbsp;</div>
 
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <script type="module">
-      // Importuje funkcję createClient z modułu Supabase
-      import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-      // URL i klucz Supabase
-      const supabaseUrl = "https://wcskddmelsobazehyceo.supabase.co";
-      const supabaseKey =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indjc2tkZG1lbHNvYmF6ZWh5Y2VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTAwNzYwODYsImV4cCI6MjAyNTY1MjA4Nn0.nhKExJF1NuEQjyJnkWyc9mKYaaZR7dqOUQlyfvUGr2Q";
-
-      // Inicjalizuje klienta Supabase
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      // Funkcja do pobierania danych użytkownika na podstawie hasha użytkownika
-      async function getUserData(userHash) {
-        try {
-          // Pobiera dane użytkownika na podstawie hasha użytkownika
-          const { data, error } = await supabase
-            .from("players")
-            .select("nick")
-            .eq("userHash", userHash)
-            .single();
-
-          if (error) {
-            console.error("Error fetching user data:", error.message);
-            return;
-          }
-
-          if (data) {
-            // Jeśli dane użytkownika zostaną znalezione, ustawia nick na stronie
-            document.getElementById("nick").value = data.nick;
-          } else {
-            console.error("User data not found for userHash:", userHash);
-            // Jeśli dane użytkownika nie zostaną znalezione, przekierowuje użytkownika na stronę logowania
-            window.location.href = "login.html";
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error.message);
-        }
+    <script>
+      // Function to retrieve cookie value by name
+      function getCookie(name) {
+        const cookieValue = document.cookie.match(
+          "(^|;)\\s*" + name + "\\s*=\\s*([^;]+)"
+        );
+        return cookieValue ? cookieValue.pop() : null;
       }
 
-      // Nasłuchuje na zdarzenie DOMContentLoaded, aby wywołać funkcję getUserData po załadowaniu dokumentu
-      document.addEventListener("DOMContentLoaded", async function () {
-        // Funkcja do pobierania wartości ciasteczka na podstawie nazwy
-        function getCookie(name) {
-          const cookieValue = document.cookie.match(
-            "(^|;)\\s*" + name + "\\s*=\\s*([^;]+)"
-          );
-          return cookieValue ? cookieValue.pop() : null;
-        }
+      // Retrieve user data from cookies
+      const userId = getCookie("userId");
+      const userEmail = getCookie("userEmail");
 
-        // Pobiera hash użytkownika z ciasteczka
-        const userHash = getCookie("userHash");
+      const nick = getCookie("nick");
+      const nickInput = document.getElementById("nick");
 
-        // Sprawdza, czy ciasteczko z hashem użytkownika istnieje
-        if (!userHash || userHash === undefined) {
-          // Jeśli ciasteczko z hashem użytkownika nie istnieje, przekierowuje użytkownika na stronę logowania
-          window.location.href = "login.html";
-        } else {
-          // Jeśli ciasteczko z hashem użytkownika istnieje, pobiera dane użytkownika
-          await getUserData(userHash);
-        }
-      });
+      nickInput.value = nick;
+      // Check if userId cookie exists
+      if (!userId) {
+        // Redirect the user to login.html if the userId cookie doesn't exist
+        window.location.href = "login.html";
+      } else {
+        // Use userId and userEmail as needed
+        console.log("User ID:", userId);
+        console.log("User Email:", userEmail);
+      }
     </script>
   </body>
 </html>
